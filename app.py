@@ -11,7 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # ==========================================
-# 1. API Keys (แก้ไข Channel Secret ตามที่คุณแจ้ง)
+# 1. API Keys (Channel Secret: ...41679...)
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = 'A2I4k7+oJf6pGXFzvQCjzRr8Bpk2SZWDmBn3m0IXXzYj3q1EEjJAFZbsqaKXnN+n20j6EtKWQbxCoBUEED5D4pgW5BfMfesrSUCYz8IuS/EWc+beF9gGYsYI2RR7LOYdV7eDTrrbi9VcWyr5I7OsdQdB04t89/1O/w1cDnyilFU='
 LINE_CHANNEL_SECRET = 'b7ac02ec7b085a0e1a37841679ee32c4'
@@ -20,8 +20,8 @@ IMGBB_API_KEY = '66827500c20f99afb6779ba1730855b8'
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-# ลิงก์กรอบรูป CM108
-FRAME_URL = "https://wsrv.nl/?url=blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiOOtphYnEgsG_Q_5Ht_nM8h4hBJkTlJ0HvXwVOlixbfIkYC4y4NTIxcfl58PvyUi9Tj9azFCGGRCK3ysLAyX3yzXVHRmfbtsau733we6uQ3DE6csoMtWBMG2TNS2i-8aOtvIKTpzkCIyh3avLpViH74sW5SnwEZCkkToZeB4Q6VO-cxHafdputo5SmSxE/s16000/%E0%B8%81%E0%B8%A3%E0%B8%AD%E0%B8%9A%E0%B9%80%E0%B8%9B%E0%B8%A5%E0%B9%88%E0%B8%B2.png&output=png"
+# แก้ไข URL กรอบรูปให้เป็นแบบ Direct Link (เอาตัวอักษรไทยออกและใช้ s0 เพื่อขนาดจริง)
+FRAME_URL = "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiOOtphYnEgsG_Q_5Ht_nM8h4hBJkTlJ0HvXwVOlixbfIkYC4y4NTIxcfl58PvyUi9Tj9azFCGGRCK3ysLAyX3yzXVHRmfbtsau733we6uQ3DE6csoMtWBMG2TNS2i-8aOtvIKTpzkCIyh3avLpViH74sW5SnwEZCkkToZeB4Q6VO-cxHafdputo5SmSxE/s0/frame_cm108.png"
 
 user_states = {}
 
@@ -61,7 +61,7 @@ def generate_cover(bg_image_bytes, text_lines):
         draw_grad.line([(0, y), (base_width, y)], fill=(0, 0, 0, alpha))
     canvas = Image.alpha_composite(canvas.convert('RGBA'), gradient)
     
-    # 3. จัดการฟอนต์ (ต้องมีไฟล์ Prompt-Bold.ttf ในเครื่อง)
+    # 3. จัดการฟอนต์
     try:
         font_path = "Prompt-Bold.ttf"
         f_large = ImageFont.truetype(font_path, 95)
@@ -74,7 +74,7 @@ def generate_cover(bg_image_bytes, text_lines):
 
     draw = ImageDraw.Draw(canvas)
     
-    # วาดข้อความ (พิกัดเลียนแบบจาก HTML)
+    # วาดข้อความ 3 บรรทัด
     t1 = text_lines[0] if len(text_lines) > 0 else ""
     if t1:
         bbox = draw.textbbox((0, 0), t1, font=f_large)
@@ -103,18 +103,21 @@ def generate_cover(bg_image_bytes, text_lines):
     w = bbox[2]-bbox[0]
     draw.text(((base_width-w)/2, 1200), d_str, font=f_date, fill="white")
     
-    # 4. วางกรอบรูป CM108
+    # 4. วางกรอบรูป CM108 (เพิ่ม User-Agent เพื่อป้องกันการโดนบล็อก)
     try:
-        resp = requests.get(FRAME_URL, timeout=10)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        resp = requests.get(FRAME_URL, headers=headers, timeout=15)
         if resp.status_code == 200:
             fr = Image.open(BytesIO(resp.content)).convert("RGBA")
             fr = fr.resize((base_width, base_height), Image.Resampling.LANCZOS)
             canvas = Image.alpha_composite(canvas, fr)
+        else:
+            print(f"Frame Download Failed: Status {resp.status_code}")
     except Exception as e:
         print(f"Frame Error: {e}")
     
     out = BytesIO()
-    canvas.convert('RGB').save(out, format='JPEG', quality=92)
+    canvas.convert('RGB').save(out, format='JPEG', quality=95)
     return out.getvalue()
 
 def upload_to_imgbb(img_bytes):
@@ -145,15 +148,12 @@ def handle_image(event):
         return
     
     try:
-        # ดึงรูปภาพจาก LINE
         content = line_bot_api.get_message_content(event.message.id)
         img_b = content.content
         
-        # สร้างภาพปกและอัปโหลด
         res_img = generate_cover(img_b, user_states[uid])
         url = upload_to_imgbb(res_img)
         
-        # ส่งกลับเป็นรูปภาพ
         line_bot_api.reply_message(event.reply_token, ImageSendMessage(original_content_url=url, preview_image_url=url))
         del user_states[uid]
     except Exception as e:
