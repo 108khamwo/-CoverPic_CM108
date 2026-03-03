@@ -14,7 +14,7 @@ app = Flask(__name__)
 # 1. ตั้งค่า API Keys (ใส่ให้ครบเรียบร้อยแล้ว)
 # ==========================================
 LINE_CHANNEL_ACCESS_TOKEN = 'A2I4k7+oJf6pGXFzvQCjzRr8Bpk2SZWDmBn3m0IXXzYj3q1EEjJAFZbsqaKXnN+n20j6EtKWQbxCoBUEED5D4pgW5BfMfesrSUCYz8IuS/EWc+beF9gGYsYI2RR7LOYdV7eDTrrbi9VcWyr5I7OsdQdB04t89/1O/w1cDnyilFU='
-LINE_CHANNEL_SECRET = 'b7ac02ec7b085a0e1a37841769ee32c4'
+LINE_CHANNEL_SECRET = 'b7ac02ec7b085a0e1a37841679ee32c4'
 IMGBB_API_KEY = '66827500c20f99afb6779ba1730855b8'
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
@@ -164,4 +164,5 @@ def handle_image(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"เกิดข้อผิดพลาด: {str(e)}"))
 
 if __name__ == "__main__":
+
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
